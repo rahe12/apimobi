@@ -10,36 +10,45 @@ const authController = {
     try {
       const { username, email, password } = req.body;
 
+      // Log incoming data for debugging
+      console.log('Received data:', { username, email, password });
+
+      // Validate required fields
       if (!username || !email || !password) {
-        return res.status(400).json({ error: 'All fields are required' });
+        return res.status(400).json({ error: 'All fields (username, email, password) are required' });
       }
 
+      // Check if user already exists
       const userExists = await db.query(
-        'SELECT * FROM users WHERE email = $1 OR username = $2', 
+        'SELECT * FROM users WHERE email = $1 OR username = $2',
         [email, username]
       );
 
       if (userExists.rows.length > 0) {
-        return res.status(400).json({ error: 'User already exists' });
+        return res.status(400).json({ error: 'User with email or username already exists' });
       }
 
+      // Hash password
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+      // Insert new user
       const newUser = await db.query(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
         [username, email, hashedPassword]
       );
 
+      // Create JWT token
       const token = jwt.sign(
-        { userId: newUser.rows[0].id }, 
-        JWT_SECRET, 
+        { userId: newUser.rows[0].id },
+        JWT_SECRET,
         { expiresIn: '30d' }
       );
 
       res.status(201).json({ user: newUser.rows[0], token });
+
     } catch (error) {
-      console.error("Register error:", error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Register Error:', error.message);
+      res.status(500).json({ error: 'Server error' });
     }
   },
 
@@ -51,41 +60,41 @@ const authController = {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
+      // Find user by email
       const user = await db.query(
-        'SELECT * FROM users WHERE email = $1', 
+        'SELECT * FROM users WHERE email = $1',
         [email]
       );
 
       if (user.rows.length === 0) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      const isValidPassword = await bcrypt.compare(
-        password, 
-        user.rows[0].password_hash
-      );
-
-      if (!isValidPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+      // Compare password
+      const isMatch = await bcrypt.compare(password, user.rows[0].password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid email or password' });
       }
 
+      // Generate token
       const token = jwt.sign(
-        { userId: user.rows[0].id }, 
-        JWT_SECRET, 
+        { userId: user.rows[0].id },
+        JWT_SECRET,
         { expiresIn: '30d' }
       );
 
-      res.json({ 
+      res.json({
         user: {
           id: user.rows[0].id,
           username: user.rows[0].username,
           email: user.rows[0].email
         },
-        token 
+        token
       });
+
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Login Error:', error.message);
+      res.status(500).json({ error: 'Server error' });
     }
   },
 
@@ -101,9 +110,10 @@ const authController = {
       }
 
       res.json(user.rows[0]);
+
     } catch (error) {
-      console.error("GetMe error:", error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('GetMe Error:', error.message);
+      res.status(500).json({ error: 'Server error' });
     }
   }
 };

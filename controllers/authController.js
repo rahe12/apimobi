@@ -35,7 +35,7 @@ const authController = {
       // Insert new user
       console.log('Inserting new user...');
       const newUser = await db.query(
-        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
+        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, hashedPassword]
       );
 
@@ -131,7 +131,7 @@ const authController = {
       }
       
       const user = await db.query(
-        'SELECT id, username, email, created_at FROM users WHERE id = $1',
+        'SELECT id, username, email FROM users WHERE id = $1',
         [req.userId]
       );
 

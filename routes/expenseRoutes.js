@@ -1,7 +1,11 @@
 const express = require('express');
 const expenseController = require('../controllers/expenseController');
+const authMiddleware = require('../middleware/authMiddleware'); // add this line
 
 const router = express.Router();
+
+// Apply authMiddleware to all routes
+router.use(authMiddleware);  // 👈 this line ensures req.userId is set
 
 router.get('/', expenseController.getExpenses);
 router.post('/', expenseController.createExpense);

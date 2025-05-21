@@ -14,7 +14,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth1', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/categories', categoryRoutes);
 

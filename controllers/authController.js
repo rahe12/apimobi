@@ -148,6 +148,81 @@ const authController = {
       });
       res.status(500).json({ error: 'Server error' });
     }
+  },
+
+  changePassword: async (req, res) => {
+    try {
+      const { current_password, new_password } = req.body;
+      console.log('Change password attempt for user ID:', req.userId);
+      
+      // Validate required fields
+      if (!current_password || !new_password) {
+        return res.status(400).json({ 
+          error: 'Current password and new password are required',
+          success: false 
+        });
+      }
+
+      // Validate new password length
+      if (new_password.length < 6) {
+        return res.status(400).json({ 
+          error: 'New password must be at least 6 characters long',
+          success: false 
+        });
+      }
+
+      // Get current user data
+      console.log('Fetching user data...');
+      const user = await db.query(
+        'SELECT * FROM users WHERE id = $1',
+        [req.userId]
+      );
+
+      if (user.rows.length === 0) {
+        return res.status(404).json({ 
+          error: 'User not found',
+          success: false 
+        });
+      }
+
+      // Verify current password
+      console.log('Verifying current password...');
+      const isCurrentPasswordValid = await bcrypt.compare(current_password, user.rows[0].password_hash);
+      
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ 
+          error: 'Current password is incorrect',
+          success: false 
+        });
+      }
+
+      // Hash new password
+      console.log('Hashing new password...');
+      const hashedNewPassword = await bcrypt.hash(new_password, SALT_ROUNDS);
+
+      // Update password in database
+      console.log('Updating password in database...');
+      await db.query(
+        'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [hashedNewPassword, req.userId]
+      );
+
+      res.json({ 
+        message: 'Password changed successfully',
+        success: true 
+      });
+
+    } catch (error) {
+      console.error('Change Password Error Details:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code
+      });
+      res.status(500).json({ 
+        error: 'Server error while changing password',
+        success: false 
+      });
+    }
   }
 };
 
